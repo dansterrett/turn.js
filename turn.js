@@ -23,6 +23,8 @@
 
 var has3d,
 
+	isSingle,
+
 	vendor ='',
 
 	PI = Math.PI,
@@ -241,10 +243,13 @@ turnMethods = {
 			vendor = getPrefix();
 		}
 
-		var i, data = this.data(), ch = this.children();
+		var self = this, i, data = this.data(), ch = this.children();
 	
 		opts = $.extend({width: this.width(), height: this.height()}, turnOptions, opts);
 		data.opts = opts;
+		// Dan Sterrett - setting the isSingle variable, so I can change the threshold calculations based on
+		// whether we are in 'single' or 'double' mode
+		isSingle = data.opts.display === 'single';
 		data.pageObjs = {};
 		data.pages = {};
 		data.pageWrap = {};
@@ -1068,7 +1073,14 @@ turnMethods = {
 
 			e.stopPropagation();
 
-		if ((new Date().getTime())-data.time<200 || point.x<0 || point.x>$(this).width()) {
+		var minXThreshold = 200;
+		var width = $(this).width();
+		var halfWay = width / 2;
+		if (halfWay < minXThreshold) minXThreshold = halfWay;
+		var isCornerOnLeft = data.point.corner.indexOf('l') > -1;
+		var exceededThreshold = isSingle ? ((new Date().getTime())-data.time<200 || (isCornerOnLeft && point.x > minXThreshold) || (!isCornerOnLeft && (width - point.x > minXThreshold))) :
+			((new Date().getTime())-data.time<200 || point.x<0 || point.x>$(this).width());
+		if (exceededThreshold) {
 			e.preventDefault();
 			data.opts.turn.data().tpage = data.opts.next;
 			data.opts.turn.turn('update');
